@@ -37,7 +37,8 @@ class Project:
     vulnerabilities: List[Vulnerability] = field(default_factory=list)
     contest_date: Optional[datetime] = None
     report_url: Optional[str] = None
-    
+    language: Optional[str] = None
+
     def to_dict(self):
         result = {
             "project_id": self.project_id,
@@ -48,6 +49,8 @@ class Project:
         }
         if self.report_url:
             result["report_url"] = self.report_url
+        if self.language:
+            result["language"] = self.language
         return result
 
 
