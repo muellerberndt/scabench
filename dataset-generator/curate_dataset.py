@@ -168,7 +168,7 @@ def run_cloc_on_repo(repo_url: str) -> Dict[str, Any]:
             
             # Run cloc
             result = subprocess.run(
-                ["cloc", "--json", "--quiet", str(clone_path)],
+                ["cloc", "--json", "--quiet", "--exclude-dir=test,tests", str(clone_path)],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -401,6 +401,12 @@ def main():
         default=1,
         help="Minimum number of high or critical vulnerabilities required (default: 1)"
     )
+    parser.add_argument(
+        "--language",
+        type=str,
+        default=None,
+        help="Filter projects by a specific language (e.g., Solidity, Rust)"
+    )
     
     args = parser.parse_args()
     
@@ -499,8 +505,31 @@ def main():
                 cloc_stats=cloc_stats
             )
             
-            curated_entries.append(entry)
-            project_stats_list.append(project_stat)
+            # Add language to the entry
+            primary_language = None
+            # Whitelist of non-programming languages to ignore
+            language_whitelist = {"json", "html", "markdown", "css", "yaml", "toml", "xml", "shell", "text", "typescript", "javascript", "svg"}
+            
+            if "languages" in cloc_stats and cloc_stats["languages"]:
+                sorted_langs = sorted(cloc_stats["languages"].items(), key=lambda x: x[1]["lines"], reverse=True)
+                
+                # Find the first language not in the whitelist
+                for lang, _ in sorted_langs:
+                    if lang.lower() not in language_whitelist:
+                        primary_language = lang
+                        entry["language"] = primary_language
+                        break
+            
+            # Filter by language if specified
+            if args.language:
+                if not primary_language or primary_language.lower() != args.language.lower():
+                    print(f"  Language Mismatch: Skipping project with language '{primary_language}'")
+                else:
+                    curated_entries.append(entry)
+                    project_stats_list.append(project_stat)
+            else:
+                curated_entries.append(entry)
+                project_stats_list.append(project_stat)
         else:
             print(f"✗ {reason}")
     
